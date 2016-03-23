@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Nodestream.GitHub.io by nodestream</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Nodestream.GitHub.io</h1>
+      <h2 class="project-tagline">Nodestream</h2>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="nodestream" class="anchor" href="#nodestream" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Nodestream</h1>
+
+<p><a href="https://npmjs.org/package/nodestream"><img src="https://badge.fury.io/js/nodestream.svg" alt="NPM Version"></a>
+<a href="https://travis-ci.org/nodestream/nodestream"><img src="https://travis-ci.org/nodestream/nodestream.svg" alt="Build Status"></a>
+<a href="https://coveralls.io/r/nodestream/nodestream"><img src="https://img.shields.io/coveralls/nodestream/nodestream.svg" alt="Coverage Status"></a>
+<a href="http://inch-ci.org/github/nodestream/nodestream"><img src="http://inch-ci.org/github/nodestream/nodestream.svg" alt="Documentation Status"></a>
+<img src="https://img.shields.io/badge/built%20with-GNU%20Make-brightgreen.svg" alt="Built with GNU Make"></p>
+
+<blockquote>
+<p>Streaming library for binary data transfers</p>
+</blockquote>
+
+<h2>
+<a id="description" class="anchor" href="#description" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Description</h2>
+
+<p>This library aims to provide an abstraction layer between your application/library and all the various remote storage services which exist on the market, either as hosted by 3rd parties or self-hosted (S3, GridFS etc.). Your code should not depend on these services directly - the code responsible for uploading a file should remain the same no matter which storage service you decide to use. The only thing that can change is the configuration.</p>
+
+<h2>
+<a id="adapters" class="anchor" href="#adapters" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Adapters</h2>
+
+<table>
+<thead>
+<tr>
+<th align="center"><a href="https://github.com/nodestream/nodestream-s3"><img src="https://cloud.githubusercontent.com/assets/3058150/13901098/80692616-ee18-11e5-98c1-91c35b936c51.png" alt="S3"></a></th>
+<th align="center"><a href="https://github.com/nodestream/nodestream-gridfs"><img src="https://cloud.githubusercontent.com/assets/3058150/13901696/59652146-ee2c-11e5-8c7e-3cba5ba9854c.png" alt="GridFS"></a></th>
+<th align="center"><a href="https://github.com/nodestream/nodestream-gcs"><img src="https://cloud.githubusercontent.com/assets/3058150/13907413/bfb554e0-eeed-11e5-9e51-ce490fad8abd.png" alt="GCS"></a></th>
+<th align="center"><a href="https://github.com/nodestream/nodestream-filesystem"><img src="https://cloud.githubusercontent.com/assets/3058150/13901081/d81b824c-ee17-11e5-8fbe-40eff40646f7.png" alt="Filesystem"></a></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">Amazon S3</td>
+<td align="center">GridFS (WIP)</td>
+<td align="center">Google Cloud Storage</td>
+<td align="center">Local Filesystem</td>
+</tr>
+</tbody>
+</table>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h2>
+
+<h3>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation</h3>
+
+<p>The first step is to install nodestream into your project:</p>
+
+<p><code>npm install --save nodestream</code></p>
+
+<p>The next thing is to decide which <em>adapter</em> you want to use. An adapter is an interface for nodestream to be able to interact with a particular storage system. Let's use local filesystem for a start:</p>
+
+<p><code>npm install --save nodestream-filesystem</code></p>
+
+<h3>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Configuration</h3>
+
+<p>Let's create and configure a nodestream instance with which your application can then interact:</p>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-c">// Require the main Nodestream class</span>
+<span class="pl-k">const</span> <span class="pl-c1">Nodestream</span> <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>nodestream<span class="pl-pds">'</span></span>)
+<span class="pl-k">const</span> <span class="pl-c1">nodestream</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Nodestream</span>({
+  <span class="pl-c">// This tells nodestream which storage system it should interact with</span>
+  <span class="pl-c">// Under the hood, it will try to require `nodestream-filesystem` module</span>
+  adapter<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>filesystem<span class="pl-pds">'</span></span>,
+  <span class="pl-c">// This object is always specific to your adapter of choice - always check</span>
+  <span class="pl-c">// the documentation for that adapter for available options</span>
+  config<span class="pl-k">:</span> {
+    <span class="pl-c">// You MUST provide either an absolute path or nothing at all</span>
+    <span class="pl-c">// You can use array notation, the parts will be joined for you</span>
+    root<span class="pl-k">:</span> [<span class="pl-c1">__dirname</span>, <span class="pl-s"><span class="pl-pds">'</span>.storage<span class="pl-pds">'</span></span>]
+  }
+})</pre></div>
+
+<p>Great! At this point, nodestream is ready to transfer some bytes!</p>
+
+<h3>
+<a id="usage-1" class="anchor" href="#usage-1" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h3>
+
+<h4>
+<a id="uploading" class="anchor" href="#uploading" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Uploading</h4>
+
+<p>You can upload any kind of readable stream. Nodestream does not care where that stream comes from, whether it's an http upload or a file from your filesystem or something totally different.</p>
+
+<p>For this example, we will upload a file from our filesystem.</p>
+
+<blockquote>
+<p>We will be uploading the file to our local filesystem as well as reading it from the same filesystem. Normally you would probably use a source different from the target storage, but Nodestream does not really care.</p>
+</blockquote>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-k">const</span> <span class="pl-c1">fs</span> <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>fs<span class="pl-pds">'</span></span>)
+<span class="pl-c">// This is the file we will upload - create a readable stream of that file</span>
+<span class="pl-k">const</span> <span class="pl-c1">profilePic</span> <span class="pl-k">=</span> <span class="pl-smi">fs</span>.<span class="pl-en">createReadStream</span>(<span class="pl-s"><span class="pl-pds">'</span>/users/me/pictures/awesome-pic.png<span class="pl-pds">'</span></span>)
+
+<span class="pl-smi">nodestream</span>.<span class="pl-en">upload</span>(profilePic, {
+  <span class="pl-c">// directory and name are supported by all storage adapters, but each</span>
+  <span class="pl-c">// adapter might have additional options you can use</span>
+  directory<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>avatars<span class="pl-pds">'</span></span>,
+  name<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>user-123.png<span class="pl-pds">'</span></span>
+})
+.<span class="pl-en">then</span>(<span class="pl-smi">results</span> <span class="pl-k">=&gt;</span> {
+  <span class="pl-c">// results can contain several properties, but the most interesting</span>
+  <span class="pl-c">// and always-present is `location` - you should definitely save this</span>
+  <span class="pl-c">// somewhere, you will need it to retrieve this file later!</span>
+  <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">results</span>.<span class="pl-c1">location</span>)
+})
+.<span class="pl-en">catch</span>(<span class="pl-smi">err</span> <span class="pl-k">=&gt;</span> {
+  <span class="pl-c">// U-oh, something blew up 😱</span>
+})</pre></div>
+
+<p>Congratulations, you just uploaded your first file!</p>
+
+<h4>
+<a id="downloading" class="anchor" href="#downloading" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Downloading</h4>
+
+<p>Downloading a file is quite straight-forward - all you need is the file's location as returned by the <code>upload()</code> method and a destination stream to which you want to send the data. This can be any valid writable stream. Again, Nodestream does not care where you are sending the bytes, be it local filesystem, an http response or even a different Nodestream instance (ie. S3 to GridFS transfer).</p>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-c">// Let's create a destination for the download</span>
+<span class="pl-k">const</span> <span class="pl-c1">fs</span> <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>fs<span class="pl-pds">'</span></span>)
+<span class="pl-k">const</span> <span class="pl-c1">destination</span> <span class="pl-k">=</span> <span class="pl-smi">fs</span>.<span class="pl-en">createWriteStream</span>(<span class="pl-s"><span class="pl-pds">'</span>/users/me/downloads/picture.png<span class="pl-pds">'</span></span>)
+
+<span class="pl-c">// We are hardcoding the location here, but you will probably want to</span>
+<span class="pl-c">// retrieve the file's location from a database</span>
+<span class="pl-smi">nodestream</span>.<span class="pl-en">download</span>(<span class="pl-s"><span class="pl-pds">'</span>avatars/user-123.png<span class="pl-pds">'</span></span>, destination)
+.<span class="pl-en">then</span>(() <span class="pl-k">=&gt;</span> {
+  <span class="pl-c">// All good, destination received all the data!</span>
+})
+.<span class="pl-en">catch</span>(<span class="pl-smi">err</span> <span class="pl-k">=&gt;</span> {
+  <span class="pl-c">// Oh well...</span>
+})</pre></div>
+
+<h4>
+<a id="removing" class="anchor" href="#removing" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Removing</h4>
+
+<p>Just pass the file's location to the <code>.remove()</code> method.</p>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-smi">nodestream</span>.<span class="pl-en">remove</span>(<span class="pl-s"><span class="pl-pds">'</span>avatars/user-123.png<span class="pl-pds">'</span></span>)
+.<span class="pl-en">then</span>(<span class="pl-smi">location</span> <span class="pl-k">=&gt;</span> {
+  <span class="pl-c">// The file at this location has just been removed!</span>
+})
+.<span class="pl-en">catch</span>(<span class="pl-smi">err</span> <span class="pl-k">=&gt;</span> {
+  <span class="pl-c">// Oh no!</span>
+})</pre></div>
+
+<h3>
+<a id="transforms" class="anchor" href="#transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transforms</h3>
+
+<p>Nodestream supports a feature called transforms. In principle, a transform is just a function that modifies the incoming or outgoing bytes in some way, transparently for each stream passing through Nodestream. Some use cases:</p>
+
+<ul>
+<li>Calculating checksums</li>
+<li>Compressing/decompressing data</li>
+<li>Modifying the data completely, ie. appending headers/footers and whatnot</li>
+</ul>
+
+<h4>
+<a id="registering-a-transform" class="anchor" href="#registering-a-transform" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Registering a transform</h4>
+
+<p>When you configure your Nodestream instance, you should register transforms using the <code>.addTransform()</code> function.</p>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-c">// The first argument defines when the transform should be applied ('upload', 'download')</span>
+<span class="pl-c">// The second argument is the transform's name - Nodestream will attempt to require</span>
+<span class="pl-c">// `nodestream-transform-compress` under the hood, so make sure you have it installed!</span>
+<span class="pl-c">// The third argument is an option configuration object which will be passed as-is to</span>
+<span class="pl-c">// the transform stream when the time comes to use the transform.</span>
+<span class="pl-smi">nodestream</span>.<span class="pl-en">addTransform</span>(<span class="pl-s"><span class="pl-pds">'</span>upload<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span>, { mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span> })
+<span class="pl-smi">nodestream</span>.<span class="pl-en">addTransform</span>(<span class="pl-s"><span class="pl-pds">'</span>download<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span>, { mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>decompress<span class="pl-pds">'</span></span> })</pre></div>
+
+<p>Now, every time you call <code>.upload()</code> or <code>.download()</code>, the respective transform will be applied on the stream.</p>
+
+<p>For uploads, a transform can optionally publish some data about the applied transformations onto the <code>results</code> object.</p>
+
+<p>There is no limit to the amount of transforms which can be registered per Nodestream instance.</p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
+
+<p>This software is licensed under the <strong>BSD-3-Clause License</strong>.</p>
+
+      <footer class="site-footer">
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
