@@ -28,7 +28,7 @@
 <p>This library aims to provide an abstraction layer between your application/library and all the various remote storage services which exist on the market, either as hosted by 3rd parties or self-hosted (S3, GridFS etc.). Your code should not depend on these services directly - the code responsible for uploading a file should remain the same no matter which storage service you decide to use. The only thing that can change is the configuration.</p>
 
 <h2>
-<a id="adapters" class="anchor" href="#adapters" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Adapters</h2>
+<a id="available-adapters" class="anchor" href="#available-adapters" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Available adapters</h2>
 
 <table>
 <thead>
@@ -45,6 +45,32 @@
 <td align="center">GridFS (WIP)</td>
 <td align="center">Google Cloud Storage</td>
 <td align="center">Local Filesystem</td>
+</tr>
+</tbody>
+</table>
+
+<h2>
+<a id="available-transforms" class="anchor" href="#available-transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Available transforms</h2>
+
+<blockquote>
+<p>See <a href="#transforms">Transforms</a> section for more info.</p>
+</blockquote>
+
+<table>
+<thead>
+<tr>
+<th align="center"><a href="https://github.com/nodestream/nodestream-transform-checksum">checksum</a></th>
+<th align="center"><a href="https://github.com/nodestream/nodestream-transform-compress">compress</a></th>
+<th align="center">progress (WIP)</th>
+<th align="center">crypto (WIP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">Checksum Calculator</td>
+<td align="center">Stream (de)compressor</td>
+<td align="center">Progress monitor</td>
+<td align="center">Stream (en/de)cryption</td>
 </tr>
 </tbody>
 </table>
@@ -86,7 +112,7 @@
 <p>Great! At this point, nodestream is ready to transfer some bytes!</p>
 
 <h3>
-<a id="usage-1" class="anchor" href="#usage-1" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h3>
+<a id="actions" class="anchor" href="#actions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Actions</h3>
 
 <h4>
 <a id="uploading" class="anchor" href="#uploading" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Uploading</h4>
@@ -153,10 +179,10 @@
   <span class="pl-c">// Oh no!</span>
 })</pre></div>
 
-<h3>
-<a id="transforms" class="anchor" href="#transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transforms</h3>
+<h2>
+<a id="transforms" class="anchor" href="#transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transforms</h2>
 
-<p>Nodestream supports a feature called transforms. In principle, a transform is just a function that modifies the incoming or outgoing bytes in some way, transparently for each stream passing through Nodestream. Some use cases:</p>
+<p>Nodestream supports a feature called transforms. In principle, a transform is just a function that acts somehow on (ie. modifies) the incoming or outgoing bytes, transparently, for each stream passing through Nodestream. Some use cases:</p>
 
 <ul>
 <li>Calculating checksums</li>
@@ -164,8 +190,14 @@
 <li>Modifying the data completely, ie. appending headers/footers and whatnot</li>
 </ul>
 
-<h4>
-<a id="registering-a-transform" class="anchor" href="#registering-a-transform" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Registering a transform</h4>
+<h3>
+<a id="registering-a-transform" class="anchor" href="#registering-a-transform" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Registering a transform</h3>
+
+<blockquote>
+<p><strong>WARNING!</strong></p>
+
+<p>The <strong>order</strong> in which transforms are registered <strong>matters!</strong> Transforms are applied to the stream in the order they were registered. For example, if you first register a checksum calculation transform and then a compress transform, the checksum will be calculated from the uncompressed data. Switching the order would cause the checksum to be calculated from the compressed data. There are use cases for both situations, so the choice of ordering is completely up to you.</p>
+</blockquote>
 
 <p>When you configure your Nodestream instance, you should register transforms using the <code>.addTransform()</code> function.</p>
 
@@ -179,9 +211,9 @@
 
 <p>Now, every time you call <code>.upload()</code> or <code>.download()</code>, the respective transform will be applied on the stream.</p>
 
-<p>For uploads, a transform can optionally publish some data about the applied transformations onto the <code>results</code> object.</p>
+<p>A transform can optionally publish some data about the applied transformations onto the <code>results</code> object.</p>
 
-<p>There is no limit to the amount of transforms which can be registered per Nodestream instance.</p>
+<p>There is no limit to the amount of transforms which can be registered per Nodestream instance, although there are some practical limitations which restrict you to only one particular transform type per Nodestream instance (ie. only one checksum transform with only one compress transform).</p>
 
 <h2>
 <a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
