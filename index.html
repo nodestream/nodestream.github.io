@@ -25,7 +25,17 @@
 <h2>
 <a id="description" class="anchor" href="#description" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Description</h2>
 
-<p>This library aims to provide an abstraction layer between your application/library and all the various remote storage services which exist on the market, either as hosted by 3rd parties or self-hosted (S3, GridFS etc.). Your code should not depend on these services directly - the code responsible for uploading a file should remain the same no matter which storage service you decide to use. The only thing that can change is the configuration.</p>
+<p>This library aims to provide a unified API for all the major storage systems out there (filesystem, AWS S3, Google Cloud Storage etc.). It also provides an easy way to manipulate data streams as they are being uploaded/downloaded from those storage systems (compression/ checksum calculation/encryption etc.).</p>
+
+<h3>
+<a id="use-cases" class="anchor" href="#use-cases" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Use cases</h3>
+
+<ul>
+<li>Single API to rule them all</li>
+<li>Easy way to transform incoming/outgoing data</li>
+<li>Work with filesystem storage during development, AWS S3 in production without changing code</li>
+<li><em>Insert your idea here</em></li>
+</ul>
 
 <h2>
 <a id="available-adapters" class="anchor" href="#available-adapters" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Available adapters</h2>
@@ -53,7 +63,7 @@
 <a id="available-transforms" class="anchor" href="#available-transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Available transforms</h2>
 
 <blockquote>
-<p>See <a href="#transforms">Transforms</a> section for more info.</p>
+<p>See <a href="#pipelines-and-transforms">Pipelines and Transforms</a> section for more info.</p>
 </blockquote>
 
 <table>
@@ -103,8 +113,7 @@
   <span class="pl-c">// This object is always specific to your adapter of choice - always check</span>
   <span class="pl-c">// the documentation for that adapter for available options</span>
   config<span class="pl-k">:</span> {
-    <span class="pl-c">// You MUST provide either an absolute path or nothing at all</span>
-    <span class="pl-c">// You can use array notation, the parts will be joined for you</span>
+    <span class="pl-c">// The `filesystem` adapter requires a `root` configuration option, so let's provide one</span>
     root<span class="pl-k">:</span> [<span class="pl-c1">__dirname</span>, <span class="pl-s"><span class="pl-pds">'</span>.storage<span class="pl-pds">'</span></span>]
   }
 })</pre></div>
@@ -180,9 +189,20 @@
 })</pre></div>
 
 <h2>
-<a id="transforms" class="anchor" href="#transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transforms</h2>
+<a id="pipelines-and-transforms" class="anchor" href="#pipelines-and-transforms" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Pipelines and Transforms</h2>
 
-<p>Nodestream supports a feature called transforms. In principle, a transform is just a function that acts somehow on (ie. modifies) the incoming or outgoing bytes, transparently, for each stream passing through Nodestream. Some use cases:</p>
+<p>Nodestream supports two features which are meant to be used together - pipelines and transforms.</p>
+
+<ul>
+<li>
+<strong>Transform</strong>: A plugin which takes an input stream and produces an output stream</li>
+<li>
+<strong>Pipeline</strong>: A re-usable, ordered collection of transforms</li>
+</ul>
+
+<p>The real power of pipelines is that you only have to create a single pipeline, tell it which transforms it should use and then you just keep sending files to or retrieving files from it - all files will be processed in exactly the same way.</p>
+
+<p>Here are some ideas what a transform can be used for. With pipelines, you can combine them to your heart's liking:</p>
 
 <ul>
 <li>Calculating checksums</li>
@@ -193,32 +213,70 @@
 <h3>
 <a id="registering-a-transform" class="anchor" href="#registering-a-transform" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Registering a transform</h3>
 
+<p>All transforms must be first registered with your Nodestream instance before you can use them in a pipeline. Registering is easy and is generally recommended to be done immediately after your application is started, because requiring a module is a synchronous, blocking operation, so you want to get it done before you start doing something important.</p>
+
+<p>Once you configure your Nodestream instance, you can register a transform using the <code>.registerTransform()</code> function.</p>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-c">// Let's register a compression transform! The following will try to require</span>
+<span class="pl-c">// `nodestream-transform-compress` package.</span>
+<span class="pl-smi">nodestream</span>.<span class="pl-en">registerTransform</span>(<span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span>)
+
+<span class="pl-c">// You can also register an actual implementation of the transform!</span>
+<span class="pl-k">const</span> <span class="pl-c1">compress</span> <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>nodestream-transform-compress<span class="pl-pds">'</span></span>)
+<span class="pl-smi">nodestream</span>.<span class="pl-en">registerTransform</span>(compress)</pre></div>
+
+<h3>
+<a id="using-pipelines" class="anchor" href="#using-pipelines" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Using pipelines</h3>
+
+<p>To use a pipeline, you must first create one! Once you have your pipeline, you can then go on and tell it to use any of the registered transforms. Pipelines are reusable, so the general practice is to create one pipeline and use it for all uploads/downloads.</p>
+
+<p>You may want to create multiple pipelines per project to accommodate different processing needs for your files, ie. you might have one pipeline for image uploads (with a transform plugin to calculate checksums and one to crop the images) and another pipeline for other files (with just the checksum transform). Any combination can be achieved.</p>
+
+<div class="highlight highlight-source-js"><pre><span class="pl-c">// Let's create our first pipeline</span>
+<span class="pl-k">const</span> <span class="pl-c1">pipeline</span> <span class="pl-k">=</span> <span class="pl-smi">nodestream</span>.<span class="pl-en">pipeline</span>()
+
+<span class="pl-c">// Now, we can tell the pipeline to use any of the registered transforms</span>
+<span class="pl-c">// The second parameter is specific to each transform so always check the</span>
+<span class="pl-c">// transform's docs to see what you can set</span>
+pipeline
+  .<span class="pl-en">use</span>(<span class="pl-s"><span class="pl-pds">'</span>checksum<span class="pl-pds">'</span></span>, { algorithm<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>md5<span class="pl-pds">'</span></span> })
+  .<span class="pl-en">use</span>(<span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span>, { algorithm<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>gzip<span class="pl-pds">'</span></span> })
+
+<span class="pl-c">// You can use a single pipeline for multiple file uploads/downloads</span>
+<span class="pl-c">// Aaand, you can also pass per-file, transform-specific options here</span>
+<span class="pl-smi">pipeline</span>.<span class="pl-en">upload</span>(file, { name<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>pic.png<span class="pl-pds">'</span></span>, compress<span class="pl-k">:</span> { mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span> } })</pre></div>
+
 <blockquote>
 <p><strong>WARNING!</strong></p>
 
-<p>The <strong>order</strong> in which transforms are registered <strong>matters!</strong> Transforms are applied to the stream in the order they were registered. For example, if you first register a checksum calculation transform and then a compress transform, the checksum will be calculated from the uncompressed data. Switching the order would cause the checksum to be calculated from the compressed data. There are use cases for both situations, so the choice of ordering is completely up to you.</p>
+<p>The <strong>order</strong> in which transforms are added to a pipeline using <code>.use()</code> <strong>matters!</strong> Transforms are applied to the stream in the order they were added. For example, if you first add a checksum calculation transform and then a compress transform, the checksum will be calculated from the uncompressed data. Switching the order would cause the checksum to be calculated from the compressed data. There are use cases for both situations, so the choice of ordering is completely up to you.</p>
 </blockquote>
 
-<p>When you configure your Nodestream instance, you should register transforms using the <code>.addTransform()</code> function.</p>
+<h3>
+<a id="accessing-transform-results" class="anchor" href="#accessing-transform-results" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Accessing transform results</h3>
 
-<div class="highlight highlight-source-js"><pre><span class="pl-c">// The first argument defines when the transform should be applied ('upload', 'download')</span>
-<span class="pl-c">// The second argument is the transform's name - Nodestream will attempt to require</span>
-<span class="pl-c">// `nodestream-transform-compress` under the hood, so make sure you have it installed!</span>
-<span class="pl-c">// The third argument is an option configuration object which will be passed as-is to</span>
-<span class="pl-c">// the transform stream when the time comes to use the transform.</span>
-<span class="pl-smi">nodestream</span>.<span class="pl-en">addTransform</span>(<span class="pl-s"><span class="pl-pds">'</span>upload<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span>, { mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span> })
-<span class="pl-smi">nodestream</span>.<span class="pl-en">addTransform</span>(<span class="pl-s"><span class="pl-pds">'</span>download<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>compress<span class="pl-pds">'</span></span>, { mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>decompress<span class="pl-pds">'</span></span> })</pre></div>
+<p>You might have noticed that Nodestream returns a Promise which is resolved with a <code>results</code> object. In addition to the <code>location</code> property, this object also contains results of all applied transformations (if there are any).</p>
 
-<p>Now, every time you call <code>.upload()</code> or <code>.download()</code>, the respective transform will be applied on the stream.</p>
+<p>Each transform declares its "identity" - a string which will be used as a "scope" to publish its results or to provide a mechanism to customise the transform's options. Check each of the transforms' documentation to learn what is its <code>identity</code> string.</p>
 
-<p>A transform can optionally publish some data about the applied transformations onto the <code>results</code> object.</p>
+<p>For the <code>checksum</code> transform, its identity is, surprisingly, "checksum". When used, the calculated checksum can be obtained as follows:</p>
+
+<div class="highlight highlight-source-js"><pre>nodestream
+  .<span class="pl-en">pipeline</span>()
+  .<span class="pl-en">use</span>(<span class="pl-s"><span class="pl-pds">'</span>checksum<span class="pl-pds">'</span></span>)
+  .<span class="pl-en">upload</span>(file, { name<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>pic.png<span class="pl-pds">'</span></span> })
+  .<span class="pl-en">then</span>(<span class="pl-smi">results</span> <span class="pl-k">=&gt;</span> {
+    <span class="pl-c">// The `results` object will have a "checksum" property, because that's</span>
+    <span class="pl-c">// the transform's identity</span>
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">results</span>.<span class="pl-smi">checksum</span>.<span class="pl-c1">value</span>)
+  })</pre></div>
 
 <p>There is no limit to the amount of transforms which can be registered per Nodestream instance, although there are some practical limitations which restrict you to only one particular transform type per Nodestream instance (ie. only one checksum transform with only one compress transform).</p>
 
 <h2>
 <a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
 
-<p>This software is licensed under the <strong>BSD-3-Clause License</strong>.</p>
+<p>This software is licensed under the <strong>BSD-3-Clause License</strong>. See the <a href="LICENSE">LICENSE</a> file for more information.</p>
 
       <footer class="site-footer">
 
